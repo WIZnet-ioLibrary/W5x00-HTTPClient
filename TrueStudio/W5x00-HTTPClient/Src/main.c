@@ -240,60 +240,57 @@ int main(void)
 	while (1)
   {
     httpc_init(0, Domain_IP, 80, g_send_buf, g_recv_buf);
-	    while(1){
+    while(1){
 		  httpc_connection_handler();
 		  if(httpc_isSockOpen)
 			{
 				httpc_connect();
 			}
 		  // HTTP client example
-		if(httpc_isConnected)
-		{
-			if(!flag_sent_http_request)
-			{
-				// Send: HTTP request
-				request.method = (uint8_t *)HTTP_GET;
-				request.uri = (uint8_t *)URI;
-				request.host = (uint8_t *)Domain_name;
+		  if(httpc_isConnected)
+		  {
+		    if(!flag_sent_http_request)
+			  {
+				  // Send: HTTP request
+				  request.method = (uint8_t *)HTTP_GET;
+				  request.uri = (uint8_t *)URI;
+				  request.host = (uint8_t *)Domain_name;
 
-				// HTTP client example #1: Function for send HTTP request (header and body fields are integrated)
-				{
-					httpc_send(&request, g_recv_buf, g_send_buf, 0);
-				}
+				  // HTTP client example #1: Function for send HTTP request (header and body fields are integrated)
+				  {
+					  httpc_send(&request, g_recv_buf, g_send_buf, 0);
+				  }
 
-				// HTTP client example #2: Separate functions for HTTP request - default header + body
-				{
-					//httpc_send_header(&request, g_recv_buf, NULL, len);
-					//httpc_send_body(g_send_buf, len); // Send HTTP requset message body
-				}
+				  // HTTP client example #2: Separate functions for HTTP request - default header + body
+				  {
+					  //httpc_send_header(&request, g_recv_buf, NULL, len);
+					  //httpc_send_body(g_send_buf, len); // Send HTTP requset message body
+				  }
 
-				// HTTP client example #3: Separate functions for HTTP request with custom header fields - default header + custom header + body
-				{
-					//httpc_add_customHeader_field(tmpbuf, "Custom-Auth", "auth_method_string"); // custom header field extended - example #1
-					//httpc_add_customHeader_field(tmpbuf, "Key", "auth_key_string"); // custom header field extended - example #2
-					//httpc_send_header(&request, g_recv_buf, tmpbuf, len);
-					//httpc_send_body(g_send_buf, len);
-				}
+				  // HTTP client example #3: Separate functions for HTTP request with custom header fields - default header + custom header + body
+				  {
+					  //httpc_add_customHeader_field(tmpbuf, "Custom-Auth", "auth_method_string"); // custom header field extended - example #1
+					  //httpc_add_customHeader_field(tmpbuf, "Key", "auth_key_string"); // custom header field extended - example #2
+					  //httpc_send_header(&request, g_recv_buf, tmpbuf, len);
+					  //httpc_send_body(g_send_buf, len);
+				  }
 
-				flag_sent_http_request = ENABLE;
-			}
+				  flag_sent_http_request = ENABLE;
+			  }
 
-			// Recv: HTTP response
-			if(httpc_isReceived > 0)
-			{
-				len = httpc_recv(g_recv_buf, httpc_isReceived);
+		    // Recv: HTTP response
+		    if(httpc_isReceived > 0)
+		    {
+				  len = httpc_recv(g_recv_buf, httpc_isReceived);
 
-				printf(" >> HTTP Response - Received len: %d\r\n", len);
-				printf("======================================================\r\n");
-				for(i = 0; i < len; i++) printf("%c", g_recv_buf[i]);
-				printf("\r\n");
-				printf("======================================================\r\n");
-			}
-
-
-
-	  }
-	    }
+				  printf(" >> HTTP Response - Received len: %d\r\n", len);
+				  printf("======================================================\r\n");
+				  for(i = 0; i < len; i++) printf("%c", g_recv_buf[i]);
+				  printf("\r\n");
+				  printf("======================================================\r\n");
+			  }
+		  }
+    }
 
     /* USER CODE END WHILE */
 
@@ -461,99 +458,89 @@ void print_network_information(void)
 
 int8_t process_dhcp(void)
 {
-    uint8_t ret = 0;
-    uint8_t dhcp_retry = 0;
+  uint8_t ret = 0;
+  uint8_t dhcp_retry = 0;
 
 #ifdef _MAIN_DEBUG_
-    printf(" - DHCP Client running\r\n");
+  printf(" - DHCP Client running\r\n");
 #endif
-    DHCP_init(SOCK_DHCP, data_buf);
-    //reg_dhcp_cbfunc(w6100_dhcp_assign, w6100_dhcp_assign, w6100_dhcp_conflict);
+  DHCP_init(SOCK_DHCP, data_buf);
+  while(1)
+  {
+    ret = DHCP_run();
 
-    //set_device_status(ST_UPGRADE);
-    while(1)
+    if(ret == DHCP_IP_LEASED)
     {
-        ret = DHCP_run();
-
-        if(ret == DHCP_IP_LEASED)
-        {
 #ifdef _MAIN_DEBUG_
-            printf(" - DHCP Success\r\n");
+      printf(" - DHCP Success\r\n");
 #endif
-            break;
-        }
-        else if(ret == DHCP_FAILED)
-        {
-            dhcp_retry++;
+        break;
+      }
+    else if(ret == DHCP_FAILED)
+    {
+      dhcp_retry++;
 #ifdef _MAIN_DEBUG_
-            if(dhcp_retry <= 3) printf(" - DHCP Timeout occurred and retry [%d]\r\n", dhcp_retry);
+      if(dhcp_retry <= 3) printf(" - DHCP Timeout occurred and retry [%d]\r\n", dhcp_retry);
 #endif
-        }
-
-        if(dhcp_retry > 3)
-        {
-#ifdef _MAIN_DEBUG_
-            printf(" - DHCP Failed\r\n\r\n");
-#endif
-            DHCP_stop();
-            break;
-        }
-
-//        do_segcp(); // Process the requests of configuration tool during the DHCP client run.
     }
 
-//    set_device_status(ST_OPEN);
+    if(dhcp_retry > 3)
+    {
+#ifdef _MAIN_DEBUG_
+      printf(" - DHCP Failed\r\n\r\n");
+#endif
+      DHCP_stop();
+      break;
+    }
 
-    return ret;
+  }
+
+  return ret;
 }
 
 
 int8_t process_dns(void)
 {
-    int8_t ret = 0;
-    uint8_t dns_retry = 0;
+  int8_t ret = 0;
+  uint8_t dns_retry = 0;
 
 #ifdef _MAIN_DEBUG_
-    printf(" - DNS Client running\r\n");
+  printf(" - DNS Client running\r\n");
 #endif
-    DNS_init(SOCK_DNS, data_buf);
-//    set_device_status(ST_UPGRADE);
+  DNS_init(SOCK_DNS, data_buf);
 
-    while(1)
+  while(1)
+  {
+
+    if((ret = DNS_run(dns_server, (uint8_t *)Domain_name, Domain_IP)) == 1)
     {
-
-
-      if((ret = DNS_run(dns_server, (uint8_t *)Domain_name, Domain_IP)) == 1)
-      {
 #ifdef _MAIN_DEBUG_
-        printf(" - DNS Success\r\n");
+      printf(" - DNS Success\r\n");
 #endif
-        break;
-      }
-      else
-      {
-        dns_retry++;
+      break;
+    }
+    else
+    {
+      dns_retry++;
 #ifdef _MAIN_DEBUG_
-        if(dns_retry <= 2) printf(" - DNS Timeout occurred and retry [%d]\r\n", dns_retry);
-#endif
-      }
-
-
-
-        if(dns_retry > 2) {
-#ifdef _MAIN_DEBUG_
-            printf(" - DNS Failed\r\n\r\n");
-#endif
-            break;
-        }
-
-        //do_segcp(); // Process the requests of configuration tool during the DNS client run.
-#ifdef __USE_DHCP__
-        DHCP_run();
+      if(dns_retry <= 2) printf(" - DNS Timeout occurred and retry [%d]\r\n", dns_retry);
 #endif
     }
-//    set_device_status(ST_OPEN);
-    return ret;
+
+
+
+    if(dns_retry > 2) {
+#ifdef _MAIN_DEBUG_
+      printf(" - DNS Failed\r\n\r\n");
+#endif
+  break;
+    }
+
+#ifdef __USE_DHCP__
+  DHCP_run();
+#endif
+  }
+  return ret;
 }
 
 /* USER CODE END 4 */
